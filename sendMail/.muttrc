@@ -1,0 +1,8 @@
+set text_flowed=yes
+set ssl_starttls=yes
+set ssl_force_tls=yes
+set use_from=yes
+set from="Personetics notifications <donotreply@personetics.com>"
+set smtp_pass="2bPerso!"
+set smtp_url="smtp://donotreply@PERSONETICS.onmicrosoft.com@smtp.office365.com:587"
+

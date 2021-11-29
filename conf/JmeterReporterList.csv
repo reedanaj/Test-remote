@@ -1,0 +1,9 @@
+ReporterType(csv/png),graphType,FileToanalyzied,ReportName,extraCommands1,extraCommands2,extraCommands3,extraCommands4,extraCommands5,extraCommands6
+csv,AggregateReport,jmeterresults.csv,AggregateReport,,,,,,
+csv,AggregateReport,errresults.csv,Error_AggregateReport,,,,,,
+csv,AggregateReport,PerfMon.csv,PerfMon,,,--include-label-regex,true,--include-labels,.*CPU|.*Memory
+png,ResponseTimesOverTime,jmeterresults.csv,ResponseTimesOverTime,--auto-scale,no,--include-label-regex,true,--include-labels,.*getInsights.*
+png,TransactionsPerSecond,jmeterresults.csv,TransactionsPerSecond,--auto-scale,no,--include-label-regex,true,--include-labels,.*getInsights.*
+png,ResponseTimesDistribution,jmeterresults.csv,ResponseTimesDistribution,--auto-scale,no,--include-label-regex,true,--include-labels,.*getInsights.*
+png,PerfMon,PerfMon.csv,PerfMon,--auto-scale,yes,--include-label-regex,true,--include-labels,.*CPU|.*Memory
+png,JMXMon,JMXMon.csv,JMXMon,--auto-scale,yes,--include-label-regex,true,--include-labels,HeapMemoryUsage|.*ProcessCpuLoad

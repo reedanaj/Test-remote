@@ -1,0 +1,81 @@
+#########################################################################################################################################################################
+#                                                                                                                                                                       #
+#   This Python script will get folder and request type and will analyzed the Pserver log      								                #
+#       Author: Omar Shibli + Carmel Dekel                                                                                                                              #
+#       Data: Nov,2020                                                                                                                                                  #
+#       Company: Personetice                                                                                                                                            #
+#                                                                                                                                                                       #
+#       To be able to run this script you should install python 3													#
+#	sudo yum install python36 -y																	#
+#																					#
+#########################################################################################################################################################################
+#!/usr/bin/python3
+import csv
+import os
+import re
+import sys
+
+# types
+requestTypes = {
+"moneyTransfer": ["PARTY_ID", "DATA_ASSETS_SAVE", "DI", "DI.AWAIT", "DROOLS.ACCESS_ACQUIRED", "DROOLS.EXECUTION", "FLOW.MoneyTransfer", "REALTIME_PREDICTION_ANALYSIS_MODEL", "TOTAL", "DI.DIParallelJoinWork.run"],
+"getInsights": ["USER_ID", "GET HISTORY", "LOGIC", "PERSIST", "RESPONSE", "TOTAL", "NUM_OF_TRANSACTIONS", "DI", "DI.AWAIT", "GET_SETTINGS_AND_ASSETS", "NUM_OF_INSIGHTS_RESPONSE", "NUM_OF_INSIGHTS_GENERATED", "NUM_OF_ACCOUNTS", "SECURITIES.DB_RETRIEVAL.TIME", "SECURITIES.EVALUATION.TIME", "enrichment.cleansingModel.EXECUTE", "enrichment.debtModelCC.EXECUTE", "enrichment.isInternationalModel.EXECUTE", "enrichment.isRefundModel.EXECUTE", "enrichment.categoryAndSubcategorySelectionProcess.EXECUTE", "enrichment.cleanDescriptionSelectionProcess.EXECUTE", "enrichment.cleanNameSelectionProcess.EXECUTE", "enrichment.subscriptionsModel.EXECUTE"],
+"pushNotificationLive": ["USER_ID", "GET HISTORY", "LOGIC", "PERSIST", "RESPONSE", "TOTAL", "NUM_OF_TRANSACTIONS", "DI", "DI.AWAIT", "NUM_OF_INSIGHTS_RESPONSE", "NUM_OF_INSIGHTS_GENERATED"],
+"NO_TYPE_PROVIDED": ["USER_ID", "DATA_ASSETS_SAVE", "DI", "DI.AWAIT", "DROOLS.ACCESS_ACQUIRED", "DROOLS.EXECUTION", "FLOW.CrossAccountActivity", "FLOW.FreeToUse", "FLOW.GetMicroSavingsEligibility", "FLOW.UserProfile", "TOTAL"],
+"getInsightDetails": ["PARTY_ID", "MERGE_EXPRESSIONS_TO_TEASER", "REPORTS_SAVE", "RESPONSE", "TOTAL"],
+"sendEvents": ["PARTY_ID", "REPORTS_SAVE", "TOTAL"],
+"updateInsightRating": ["PARTY_ID", "REPORTS_SAVE", "TOTAL"],
+"getInboxInsights": ["PARTY_ID", "MERGE_EXPRESSIONS_TO_TEASER", "REPORTS_SAVE", "RESPONSE", "TOTAL"],
+"getNumberOfInsights": ["PARTY_ID", "GET HISTORY", "PERSIST", "POPULATE SEGMENTS HISTORY", "REPORTS_SAVE", "RESPONSE", "TOTAL", "NUM_OF_INSIGHTS_RESPONSE"],
+"generateInsights": ["PARTY_ID", "GET HISTORY", "LOGIC", "PERSIST", "RESPONSE", "TOTAL", "NUM_OF_TRANSACTIONS", "DI", "DI.AWAIT", "DI.FETCH.GET_DATA", "DI.FETCH.PREPARE", "DI.FETCH.PROCESS", "NUM_OF_INSIGHTS_RESPONSE", "NUM_OF_INSIGHTS_GENERATED", "NUM_OF_ACCOUNTS"],
+"MicroSavingsAndDataAssets":["PARTY_ID", "DATA_ASSETS_SAVE", "DI", "DI.AWAIT", "DROOLS.ACCESS_ACQUIRED", "DROOLS.EXECUTION", "FLOW.CrossAccountActivity", "FLOW.FreeToUse", "FLOW.GetMicroSavingsEligibility", "FLOW.PYFEligibility", "FLOW.UserProfile", "PROGRAMS_ELIGIBILITY", "PROGRAMS_ELIGIBILITY.PYF", "TOTAL", "DI.DIParallelJoinWork.run"],
+"ProfilesAndPYFEligibilityFUT":["PARTY_ID", "DATA_ASSETS_SAVE", "DI", "DI.AWAIT", "DROOLS.ACCESS_ACQUIRED", "DROOLS.EXECUTION", "FLOW.FreeToUse", "FLOW.PYFEligibility", "FLOW.UserProfile", "PROGRAMS_ELIGIBILITY", "PROGRAMS_ELIGIBILITY.PYF", "TOTAL", "DI.DIParallelJoinWork.run"],
+"setMicrosavingsSettings": ["PARTY_ID", "REPORTS_SAVE", "TOTAL"],
+"setProgramSettings": ["PARTY_ID", "REPORTS_SAVE", "TOTAL"],
+"PYFMoneyTransfer": ["PARTY_ID", "DATA_ASSETS_SAVE", "DI", "DI.AWAIT", "DROOLS.ACCESS_ACQUIRED", "DROOLS.EXECUTION", "FLOW.PYFMoneyTransferDecision", "FLOW.PYFMoneyTransferExecutor", "PROGRAM_TRANSFER_DECISION_MAKER", "PROGRAM_TRANSFER_DECISION_MAKER.PYF", "PROGRAM_TRANSFER_EXECUTOR", "PROGRAM_TRANSFER_EXECUTOR.PYF", "REALTIME_PREDICTION_ANALYSIS_MODEL", "TOTAL", "DI.DIParallelJoinWork.run"],
+"DataAssets": ["PARTY_ID", "DATA_ASSETS_SAVE", "DI", "DI.AWAIT", "DI.FETCH.GET_DATA", "DI.FETCH.PREPARE", "DI.FETCH.PROCESS", "DROOLS.ACCESS_ACQUIRED", "DROOLS.EXECUTION", "FLOW.CrossAccountActivity", "FLOW.FreeToUse", "FLOW.UserProfile", "TOTAL"]
+}
+
+
+def parse_line(line, metrics):
+    # remove file prefix if exists
+    line = line[line.find(":") + 1:] if line.startswith("pserver") else line
+    line_date = line[0:23].replace("-", "/")
+    
+    metrics_str = re.search('totals : -(.*)', line).group(1)
+    metrics_dict = dict([s.strip() for s in x.split(': ')] for x in metrics_str.split(', ') if x.strip())
+
+    return [line_date] + [metrics_dict.get(metric, '0') for metric in metrics]
+
+
+def run(filepath, metrics):
+    folderPath = os.environ.get('PERSONETICS_HOME')
+    os.system('zgrep -h "TOTAL:" ' + folderPath + '/logs/' + filepath + '/pserver.* | egrep "BATCH: ' + metrics + '|REQUEST_TYPE: ' + metrics + '" | sed s/\ -\ totals\ -/\ -\ totals\ :\ -/g > ' + folderPath + '/logs/' + filepath + '/report.tmp')
+    with open(folderPath + '/logs/' + filepath + '/report.tmp', "r") as reader:
+        content_list = reader.readlines()
+    os.system('rm ' + folderPath + '/logs/' + filepath + '/report.tmp')
+
+    # write to csv
+    with open(folderPath + '/logs/' + filepath + '/' + filepath + '_' + metrics + '_Total.csv', 'w', newline='') as csv_file:
+        writer = csv.writer(csv_file, quoting=csv.QUOTE_MINIMAL, lineterminator="\n")
+    # write header  
+        writer.writerow(['Date'] + requestTypes[metrics])
+
+    # write content
+        for line in content_list:
+            writer.writerow(parse_line(line, requestTypes[metrics]))
+
+
+def main():
+    if len(sys.argv) < 3:
+        sys.exit("Usage: python3 logAnalysis.py <results dir> <Request Type>\ne.g: python3 logAnalysis.py USB_Push_3.15.2_Engage_2019.1.8.22_5_20200816_1047_PS6 pushNotificationLive\nthis script support:\n1.getInsights\n2.pushNotificationLive\n3.moneyTransfer\n4.getInsightDetails\n5.sendEvents\n6.updateInsightRating\n7.getInboxInsights\n8.getNumberOfInsights\n9.generateInsights\n10.MicroSavingsAndDataAssets\n11.ProfilesAndPYFEligibilityFUT\n12.PYFMoneyTransfer\n13.DataAssets\n14.NO_TYPE_PROVIDED")
+    # This parameter will reciev  the results folder name
+    file_path = sys.argv[1]
+    # This parameter will reciev the request type that we want to analyzed
+    reqtype = sys.argv[2]
+    run(file_path, reqtype)
+
+        
+
+
+if __name__ == '__main__':
+	main()
